@@ -60,12 +60,31 @@ ipeds::available_ipeds()
 ## Institutions
 
 ```{r, eval=F}
+options(timeout = 600)
+("ipeds.download.dir" = "~/Desktop/Quant Shop/College Default Rate/ipeds/data")
+
+
+#ipeds::download_ipeds(
+  #year = 2018, 
+  #dir = "~/Desktop/Quant Shop/College Default Rate/ipeds/code/data/downloaded",
+  #force=T) 
+
 ipeds::download_ipeds(
-  year = 2018, 
-  dir = "/Users/nathanalexander/Dropbox/Work items/Howard/C&I/Memos/data/downloaded",
-  force=T) # download data
-ipeds2018 <- ipeds::load_ipeds(2018) # load data
-names(ipeds2018)
+  year = 2021, 
+  dir = "~/Desktop/Quant Shop/College Default Rate/ipeds/code/data/downloaded",
+  force=T) 
+
+# download data
+#ipeds2018 <- ipeds::load_ipeds(2018) # load data
+#names(ipeds2018)
+
+
+
+ipeds2021 <- ipeds::load_ipeds(2021) # load data
+names(ipeds2021)
+
+
+
 hd2021 <- ipeds::ipeds_survey(table = 'HD', year = 2021)
 names(hd2021)
 names(hd2021) <- tolower(names(hd2021))
@@ -82,7 +101,7 @@ HBCUs <- c(
   "131520"  # Howard University
 )
 
-hd202.hbcu <- hd2021[which(hd2021$unitid %in%HBCU),]
+hd2021.hbcu <- hd2021[which(hd2021$unitid %in%HBCUs),]
 p <- hd2021.hbcu[, c("instnm", "webaddr", "stabbr", "control")]
 names(p) <- c("Institution", "Web Address", "State", "Sector")
 p

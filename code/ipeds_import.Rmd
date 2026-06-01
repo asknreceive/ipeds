@@ -66,7 +66,7 @@ Given the large size of the data frames, we select the first few columns and lim
 ## Institutional characteristics
 
 ```{r, include=T, message=F, warning=F}
-ic %>% 
+ic %>%
   select(UNITID, PEO1ISTR, PEO2ISTR, PEO3ISTR, PEO4ISTR) %>% 
   head(n=2)
 ```
