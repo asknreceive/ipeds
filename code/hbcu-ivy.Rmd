@@ -18,29 +18,354 @@ editor_options:
     wrap: sentence
 ---
 
+---
+title: "Population Dynamics at HBCUs and Ivy League Institutions"
+author: 
+  - "Nathan Alexander"
+  - "Center for Applied Data Science and Analytics"
+  - "Howard University"
+output:
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true  # Enable floating TOC in the sidebar
+    number_sections: true
+    theme: cerulean
+    always_allow_html: true
+    self_contained: true
+editor_options:
+  markdown:
+    wrap: sentence
+---
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+remotes::install_github("btskinner/rscorecard")
 remotes::install_github('jbryer/ipeds')
+install.packages("writexl")
 ```
 
 ```{r ipeds, include=F}
+library(rscorecard)
 library(ipeds)
 library(ggplot2)
 library(xtable)
+library(writexl)
 #install.packages("maps")
 library(maps)
-
+## use your real key in place of the Xs
+sc_key('0yRXAMFlax8c0K0rD8uJJeOwiSWrWfeXUjUfF5wn')
 # list of the currently available functions
+ls('package:rscorecard')
 ls('package:ipeds')
 ```
 
 # DATA
 
-Loading data from an [`ipeds` R package](https://github.com/jbryer/ipeds) to analyze population dynamics at HBCUs and Ivy League Institutions.
+Loading data from a [`rscorecard`` R package](https://github.com/btskinner/rscorecard) and  [`ipeds` R package](https://github.com/jbryer/ipeds) to analyze population dynamics at HBCUs, Ivy League, and Community College Institutions.
 
-The Integrated Postsecondary Education Data System, or IPEDS, contains data on higher education institutions in the United States. The data are made publically available for analysis by researchers. 
+The US Department of Education College Scorecard  contains data on higher education institutions in the United States. The data are made publically available for analysis by researchers. 
 
-For this memo, I used the `ipeds` package in R to perform all analysis.
+For this memo, I used the `rscorecard` and `ipeds`  package in R to perform all analysis.
+
+
+
+## Scorecard HBCUs 
+```{r, include=F}
+# list of surveys that are available to download
+
+
+HBCUs <- c(
+  "220182", # Tennessee State University
+  "175772", # Jackson State University
+  "234155", # Virginia State University
+  "176044", # Mississippi Valley State University
+  "198543", # Fayetteville State University
+  "198507", # Elizabeth City State University
+  "199102", # North Carolina A&T State University
+  "131520"  # Howard University
+)
+
+# sc_dict(filter_vars = TRUE)--> acts as documentation for rscorecard
+#sc_dict("year")
+
+SC.hbcu <- sc_init() |> 
+      sc_filter(hbcu==1) |> 
+    sc_select(unitid,opeid6, instnm, stabbr,
+    lo_inc_rpy_5yr_rt,
+md_inc_rpy_5yr_rt,
+hi_inc_rpy_5yr_rt,
+
+d150_4,
+d150_l4,
+d150_4_pooled,
+d150_l4_pooled,
+
+pctpell_dcs,
+pell_debt_mdn,
+
+grad_debt_mdn_supp,
+grad_debt_mdn10yr_supp,
+
+md_earn_wne_5yr,
+md_earn_wne_inc1_p6
+  ) |>
+    sc_year("latest") |> 
+    sc_get()
+SC.hbcu1<- SC.hbcu[which(SC.hbcu$unitid %in%HBCUs),]
+m <- SC.hbcu1[ c("unitid",
+"opeid6",
+"instnm",
+"stabbr",
+"lo_inc_rpy_5yr_rt",
+"md_inc_rpy_5yr_rt",
+"hi_inc_rpy_5yr_rt",
+
+"d150_4",
+"d150_4_pooled",
+
+
+"pctpell_dcs",
+"pell_debt_mdn",
+
+"grad_debt_mdn_supp",
+"grad_debt_mdn10yr_supp",
+
+"md_earn_wne_5yr",
+"md_earn_wne_inc1_p6")]
+names(m) <- c("Unit ID",
+"OPEID","Institution",
+"State",
+
+"Low Family Income Repayment Rate (5yr)",
+"Medium Family Income Repayment Rate (5yr)",
+"High Family Income Repayment Rate (5yr)",
+
+"Completion Count (150%)",
+
+"Completion Count Rolling Average (150%)",
+
+
+"Pell Percentage of DCS",
+"Median Pell Debt",
+
+"Median Debt of Completer",
+"Median Debt of Completer (10yr Monthly Payment)",
+
+"Median Earnings 5 Years After Comlpetion",
+"Median Earnings 5 Years After Completion (Low Income)"
+  
+  
+  
+
+)
+m
+
+
+
+```
+
+
+
+## Scorecard Ivys 
+
+
+```{r, include=F}
+# list of surveys that are available to download
+
+
+
+
+IvyLeague <- c(
+  "186131", # Yale University
+  "190150", # Columbia University
+  "166027", # Cornell University
+  "130794", # Dartmouth College
+  "215062", # University of Pennsylvania
+  "182670", # Princeton University
+  "217156", # Brown University
+  "190415"  # Harvard University
+)
+
+SC.ivy <- sc_init() |> 
+      sc_filter(region == c(1,2), ccbasic == c(15,16)) |> 
+    sc_select(unitid,opeid6, instnm, stabbr,
+    lo_inc_rpy_5yr_rt,
+md_inc_rpy_5yr_rt,
+hi_inc_rpy_5yr_rt,
+
+d150_4,
+d150_l4,
+d150_4_pooled,
+d150_l4_pooled,
+
+pctpell_dcs,
+pell_debt_mdn,
+
+grad_debt_mdn_supp,
+grad_debt_mdn10yr_supp,
+
+md_earn_wne_5yr,
+md_earn_wne_inc1_p6
+  ) |>
+    sc_year("latest") |> 
+    sc_get()
+SC.ivy1<- SC.ivy[which(SC.ivy$unitid %in%IvyLeague),]
+n <- SC.ivy1[ c("unitid",
+"opeid6",
+"instnm",
+"stabbr",
+"lo_inc_rpy_5yr_rt",
+"md_inc_rpy_5yr_rt",
+"hi_inc_rpy_5yr_rt",
+
+"d150_4",
+"d150_4_pooled",
+
+
+"pctpell_dcs",
+"pell_debt_mdn",
+
+"grad_debt_mdn_supp",
+"grad_debt_mdn10yr_supp",
+
+"md_earn_wne_5yr",
+"md_earn_wne_inc1_p6")]
+names(n) <- c("Unit ID",
+"OPEID","Institution",
+"State",
+
+"Low Family Income Repayment Rate (5yr)",
+"Medium Family Income Repayment Rate (5yr)",
+"High Family Income Repayment Rate (5yr)",
+
+"Completion Count (150%)",
+
+"Completion Count Rolling Average (150%)",
+
+
+"Pell Percentage of DCS",
+"Median Pell Debt",
+
+"Median Debt of Completer",
+"Median Debt of Completer (10yr Monthly Payment)",
+
+"Median Earnings 5 Years After Comlpetion",
+"Median Earnings 5 Years After Completion (Low Income)"
+  
+  
+  
+
+)
+n
+
+
+
+```
+
+
+
+## Scorecard Community Colleges
+
+```{r, include=F}
+# list of surveys that are available to download
+
+
+
+
+
+
+Community <- c(
+"197966", # Beaufort County Community College 
+"177977", # State Technical College of Missouri 
+"155487", # Manhattan Area Technical College 
+"114716", # Foothill College 
+"163426", # Montgomery College 
+"198491", # Edgecombe Community College 
+"116439" # Irvine Valley College 
+)
+
+SC.comm <- sc_init() |> 
+      sc_filter(region == c(2,4,5,8)) |> 
+    sc_select(unitid,opeid6, instnm, stabbr,
+    lo_inc_rpy_5yr_rt,
+md_inc_rpy_5yr_rt,
+hi_inc_rpy_5yr_rt,
+
+d150_4,
+d150_l4,
+d150_4_pooled,
+d150_l4_pooled,
+
+pctpell_dcs,
+pell_debt_mdn,
+
+grad_debt_mdn_supp,
+grad_debt_mdn10yr_supp,
+
+md_earn_wne_5yr,
+md_earn_wne_inc1_p6
+  ) |>
+    sc_year("latest") |> 
+    sc_get()
+
+
+
+SC.comm1<- SC.comm[which(SC.comm$unitid %in%Community),]
+o <- SC.comm1[ c("unitid",
+"opeid6",
+"instnm",
+"stabbr",
+"lo_inc_rpy_5yr_rt",
+"md_inc_rpy_5yr_rt",
+"hi_inc_rpy_5yr_rt",
+
+"d150_4",
+"d150_4_pooled",
+
+
+"pctpell_dcs",
+"pell_debt_mdn",
+
+"grad_debt_mdn_supp",
+"grad_debt_mdn10yr_supp",
+
+"md_earn_wne_5yr",
+"md_earn_wne_inc1_p6")]
+
+
+names(o) <- c("Unit ID",
+"OPEID","Institution",
+"State",
+
+"Low Family Income Repayment Rate (5yr)",
+"Medium Family Income Repayment Rate (5yr)",
+"High Family Income Repayment Rate (5yr)",
+
+"Completion Count (150%)",
+
+"Completion Count Rolling Average (150%)",
+
+
+"Pell Percentage of DCS",
+"Median Pell Debt",
+
+"Median Debt of Completer",
+"Median Debt of Completer (10yr Monthly Payment)",
+
+"Median Earnings 5 Years After Comlpetion",
+"Median Earnings 5 Years After Completion (Low Income)"
+  
+  
+  
+
+)
+o
+
+
+
+```
+
 
 
 ```{r, include=F}
@@ -57,11 +382,12 @@ ipeds::available_ipeds()
 ```
 
 
-## Institutions
+
+## IPEDS Institutions 
 
 ```{r, eval=F}
 options(timeout = 600)
-("ipeds.download.dir" = "~/Desktop/Quant Shop/College Default Rate/ipeds/data")
+#("ipeds.download.dir" = "/Users/Ari/Desktop/Quant Shop/College Default Rate/ipeds/data/downloaded/")
 
 
 #ipeds::download_ipeds(
@@ -69,10 +395,10 @@ options(timeout = 600)
   #dir = "~/Desktop/Quant Shop/College Default Rate/ipeds/code/data/downloaded",
   #force=T) 
 
-ipeds::download_ipeds(
-  year = 2021, 
-  dir = "~/Desktop/Quant Shop/College Default Rate/ipeds/code/data/downloaded",
-  force=T) 
+#ipeds::download_ipeds(
+  #year = 2021, 
+ # dir = "~/Desktop/Quant Shop/College Default Rate/ipeds/data/downloaded",
+ # force=T) 
 
 # download data
 #ipeds2018 <- ipeds::load_ipeds(2018) # load data
@@ -102,8 +428,8 @@ HBCUs <- c(
 )
 
 hd2021.hbcu <- hd2021[which(hd2021$unitid %in%HBCUs),]
-p <- hd2021.hbcu[, c("instnm", "webaddr", "stabbr", "control")]
-names(p) <- c("Institution", "Web Address", "State", "Sector")
+p <- hd2021.hbcu[, c("instnm", "webaddr", "stabbr", "control","unitid")]
+names(p) <- c("Institution", "Web Address", "State", "Sector","Unit ID")
 p
 
 IvyLeague <- c(
@@ -118,7 +444,41 @@ IvyLeague <- c(
 )
 
 hd2021.ivy <- hd2021[which(hd2021$unitid %in%IvyLeague),]
-q <- hd2021.ivy[, c("instnm", "webaddr", "stabbr", "control")]
-names(p) <- c("Institution", "Web Address", "State", "Sector")
+q <- hd2021.ivy[, c("instnm", "webaddr", "stabbr", "control","unitid")]
+names(q) <- c("Institution", "Web Address", "State", "Sector","Unit ID" )
 q
+
+Community <- c(
+"197966", # Beaufort County Community College 
+"177977", # State Technical College of Missouri 
+"155487", # Manhattan Area Technical College 
+"114716", # Foothill College 
+"163426", # Montgomery College 
+"198491", # Edgecombe Community College 
+"116439" # Irvine Valley College 
+)
+
+hd2021.comm <- hd2021[which(hd2021$unitid %in%Community),]
+r <- hd2021.comm[, c("instnm", "webaddr", "stabbr", "control","unitid")]
+names(r) <- c("Institution", "Web Address", "State", "Sector","Unit ID")
+r
+
 ```
+
+
+
+```{r, include=F}
+
+
+MP.HBCU<- merge(m, p, by = c("Unit ID","Institution","State"), all = TRUE)
+NQ.IVY<- merge(n, q, by = c("Unit ID","Institution","State"), all = TRUE)
+OR.COMM<- merge(o, r, by = c("Unit ID","Institution","State"), all = TRUE)
+
+
+# Combine into a named list
+Inital_Default_List  <- list("Initial HBCU Default Data" = MP.HBCU, "Initial Ivy Default Data" = NQ.IVY,
+"Initial Community Default Data" = OR.COMM)
+# Export to one file with multiple sheets
+write_xlsx(Inital_Default_List, "Inital_Default.xlsx")
+```
+
