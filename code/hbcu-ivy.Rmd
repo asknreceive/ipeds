@@ -1,6 +1,7 @@
 ---
 title: "Population Dynamics at HBCUs and Ivy League Institutions"
-author: 
+author:
+  - "Ari Kamau"
   - "Nathan Alexander"
   - "Center for Applied Data Science and Analytics"
   - "Howard University"
@@ -18,25 +19,10 @@ editor_options:
     wrap: sentence
 ---
 
----
-title: "Population Dynamics at HBCUs and Ivy League Institutions"
-author: 
-  - "Nathan Alexander"
-  - "Center for Applied Data Science and Analytics"
-  - "Howard University"
-output:
-  html_document:
-    toc: true
-    toc_depth: 2
-    toc_float: true  # Enable floating TOC in the sidebar
-    number_sections: true
-    theme: cerulean
-    always_allow_html: true
-    self_contained: true
-editor_options:
-  markdown:
-    wrap: sentence
----
+
+
+#Setup
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -44,6 +30,8 @@ remotes::install_github("btskinner/rscorecard")
 remotes::install_github('jbryer/ipeds')
 install.packages("writexl")
 ```
+
+
 
 ```{r ipeds, include=F}
 library(rscorecard)
@@ -53,11 +41,17 @@ library(xtable)
 library(writexl)
 #install.packages("maps")
 library(maps)
-## use your real key in place of the Xs
+# Get your Data.gov API key at https://api.data.gov/signup/. Save your key in your R environment at the start of your R session using sc_key()
 sc_key('0yRXAMFlax8c0K0rD8uJJeOwiSWrWfeXUjUfF5wn')
 # list of the currently available functions
 ls('package:rscorecard')
 ls('package:ipeds')
+
+# To look up information about data elements, use the sc_dict() function.
+sc_dict(filter_vars = TRUE) # List of all variables
+sc_dict("hi_inc_rpy_5yr_rt") # Example
+
+
 ```
 
 # DATA
@@ -68,11 +62,10 @@ The US Department of Education College Scorecard  contains data on higher educat
 
 For this memo, I used the `rscorecard` and `ipeds`  package in R to perform all analysis.
 
+##Scorecard Institutions
 
-
-## Scorecard HBCUs 
+### HBCUs 
 ```{r, include=F}
-# list of surveys that are available to download
 
 
 HBCUs <- c(
@@ -86,12 +79,10 @@ HBCUs <- c(
   "131520"  # Howard University
 )
 
-# sc_dict(filter_vars = TRUE)--> acts as documentation for rscorecard
-#sc_dict("year")
-
-SC.hbcu <- sc_init() |> 
-      sc_filter(hbcu==1) |> 
-    sc_select(unitid,opeid6, instnm, stabbr,
+                         
+SC.hbcu <- sc_init() |>  
+      sc_filter(hbcu==1) |>   # Filter Data for HBCUs
+    sc_select(unitid,opeid6, instnm, stabbr,    # Select Key Variables
     lo_inc_rpy_5yr_rt,
 md_inc_rpy_5yr_rt,
 hi_inc_rpy_5yr_rt,
@@ -110,7 +101,7 @@ grad_debt_mdn10yr_supp,
 md_earn_wne_5yr,
 md_earn_wne_inc1_p6
   ) |>
-    sc_year("latest") |> 
+    sc_year("latest") |> # Set Year
     sc_get()
 SC.hbcu1<- SC.hbcu[which(SC.hbcu$unitid %in%HBCUs),]
 m <- SC.hbcu1[ c("unitid",
@@ -154,9 +145,6 @@ names(m) <- c("Unit ID",
 
 "Median Earnings 5 Years After Comlpetion",
 "Median Earnings 5 Years After Completion (Low Income)"
-  
-  
-  
 
 )
 m
@@ -167,14 +155,10 @@ m
 
 
 
-## Scorecard Ivys 
+### Ivys 
 
 
 ```{r, include=F}
-# list of surveys that are available to download
-
-
-
 
 IvyLeague <- c(
   "186131", # Yale University
@@ -188,8 +172,9 @@ IvyLeague <- c(
 )
 
 SC.ivy <- sc_init() |> 
-      sc_filter(region == c(1,2), ccbasic == c(15,16)) |> 
-    sc_select(unitid,opeid6, instnm, stabbr,
+      sc_filter(region == c(1,2), ccbasic == c(15,16)) |> # Filter Data for Ivys
+    sc_select(unitid,opeid6, instnm, stabbr, # Select Key Variables
+    lo_inc_rpy_5yr_rt,
     lo_inc_rpy_5yr_rt,
 md_inc_rpy_5yr_rt,
 hi_inc_rpy_5yr_rt,
@@ -208,7 +193,7 @@ grad_debt_mdn10yr_supp,
 md_earn_wne_5yr,
 md_earn_wne_inc1_p6
   ) |>
-    sc_year("latest") |> 
+    sc_year("latest") |> # Set Year
     sc_get()
 SC.ivy1<- SC.ivy[which(SC.ivy$unitid %in%IvyLeague),]
 n <- SC.ivy1[ c("unitid",
@@ -265,15 +250,9 @@ n
 
 
 
-## Scorecard Community Colleges
+### Community Colleges
 
 ```{r, include=F}
-# list of surveys that are available to download
-
-
-
-
-
 
 Community <- c(
 "197966", # Beaufort County Community College 
@@ -286,8 +265,9 @@ Community <- c(
 )
 
 SC.comm <- sc_init() |> 
-      sc_filter(region == c(2,4,5,8)) |> 
-    sc_select(unitid,opeid6, instnm, stabbr,
+      sc_filter(region == c(2,4,5,8)) |> # Filter Data for Community Colleges
+    sc_select(unitid,opeid6, instnm, stabbr, # Select Key Variables
+    lo_inc_rpy_5yr_rt,
     lo_inc_rpy_5yr_rt,
 md_inc_rpy_5yr_rt,
 hi_inc_rpy_5yr_rt,
@@ -306,7 +286,7 @@ grad_debt_mdn10yr_supp,
 md_earn_wne_5yr,
 md_earn_wne_inc1_p6
   ) |>
-    sc_year("latest") |> 
+    sc_year("latest") |> # Set Year
     sc_get()
 
 
@@ -368,6 +348,9 @@ o
 
 
 
+## IPEDS Institutions 
+
+
 ```{r, include=F}
 # list of surveys that are available to download
 data(surveys)
@@ -383,27 +366,17 @@ ipeds::available_ipeds()
 
 
 
-## IPEDS Institutions 
 
 ```{r, eval=F}
+# sets machine timeout time 
 options(timeout = 600)
+
 #("ipeds.download.dir" = "/Users/Ari/Desktop/Quant Shop/College Default Rate/ipeds/data/downloaded/")
 
-
 #ipeds::download_ipeds(
-  #year = 2018, 
-  #dir = "~/Desktop/Quant Shop/College Default Rate/ipeds/code/data/downloaded",
-  #force=T) 
-
-#ipeds::download_ipeds(
-  #year = 2021, 
- # dir = "~/Desktop/Quant Shop/College Default Rate/ipeds/data/downloaded",
- # force=T) 
-
-# download data
-#ipeds2018 <- ipeds::load_ipeds(2018) # load data
-#names(ipeds2018)
-
+ #year = 2021, 
+ #dir = "~/Desktop/Quant Shop/College Default Rate/ipeds/data/downloaded",
+ #force=T)  
 
 
 ipeds2021 <- ipeds::load_ipeds(2021) # load data
@@ -467,17 +440,23 @@ r
 
 
 
+# Merge Scorecard and IPEDS Data
+ 
+Note: For future reference, we may only use Unit Id ( 6 digit OPE ID ) for merging as it is the most compact and translatable variable across data sets.
 ```{r, include=F}
 
-
+# Merge each Institutions Data using Key Variable
 MP.HBCU<- merge(m, p, by = c("Unit ID","Institution","State"), all = TRUE)
 NQ.IVY<- merge(n, q, by = c("Unit ID","Institution","State"), all = TRUE)
 OR.COMM<- merge(o, r, by = c("Unit ID","Institution","State"), all = TRUE)
 
 
 # Combine into a named list
-Inital_Default_List  <- list("Initial HBCU Default Data" = MP.HBCU, "Initial Ivy Default Data" = NQ.IVY,
-"Initial Community Default Data" = OR.COMM)
+Inital_Default_List  <- list(
+"Initial HBCU Default Data" = MP.HBCU, 
+"Initial Ivy Default Data" = NQ.IVY,
+"Initial Community Default Data" = OR.COMM
+)
 # Export to one file with multiple sheets
 write_xlsx(Inital_Default_List, "Inital_Default.xlsx")
 ```
