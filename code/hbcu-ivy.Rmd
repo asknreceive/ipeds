@@ -333,8 +333,8 @@ ipeds::available_ipeds()
 options(timeout = 600)
 
 
-#Download the IPEDS data
-ipeds::download_ipeds(
+# Download the IPEDS data
+ ipeds::download_ipeds(
  year = 2021,             # Set Year
  dir = "data/downloaded", # using the here::i_am function modifies machine specific working directory pathways into project specific pathways improving reproducibility
  force=TRUE)              
