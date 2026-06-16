@@ -46,7 +46,8 @@ library(writexl)
 library(maps)
 
 # Get your Data.gov API key at https://api.data.gov/signup/. Save the key in your R environment at the start of your R session using sc_key()
-sc_key('0yRXAMFlax8c0K0rD8uJJeOwiSWrWfeXUjUfF5wn')
+# use your real key in place of the Xs
+sc_key('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
 # list of the currently available functions
 ls('package:rscorecard')
 ls('package:ipeds')
