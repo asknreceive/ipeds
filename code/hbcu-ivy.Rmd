@@ -1,6 +1,7 @@
 ---
 title: "Population Dynamics at HBCUs and Ivy League Institutions"
-author: 
+author:
+  - "Ari Kamau"
   - "Nathan Alexander"
   - "Center for Applied Data Science and Analytics"
   - "Howard University"
@@ -18,32 +19,22 @@ editor_options:
     wrap: sentence
 ---
 
----
-title: "Population Dynamics at HBCUs and Ivy League Institutions"
-author: 
-  - "Nathan Alexander"
-  - "Center for Applied Data Science and Analytics"
-  - "Howard University"
-output:
-  html_document:
-    toc: true
-    toc_depth: 2
-    toc_float: true  # Enable floating TOC in the sidebar
-    number_sections: true
-    theme: cerulean
-    always_allow_html: true
-    self_contained: true
-editor_options:
-  markdown:
-    wrap: sentence
----
+
+
+#Setup
+
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 remotes::install_github("btskinner/rscorecard")
 remotes::install_github('jbryer/ipeds')
 install.packages("writexl")
+install.packages("here")
+library(here)
+here::i_am("hbcu-ivy.Rmd")   # Uses the "here" R package to set the current RMD file as the top directory (Easier Reproduceability)
 ```
+
+
 
 ```{r ipeds, include=F}
 library(rscorecard)
@@ -53,11 +44,18 @@ library(xtable)
 library(writexl)
 #install.packages("maps")
 library(maps)
-## use your real key in place of the Xs
-sc_key('0yRXAMFlax8c0K0rD8uJJeOwiSWrWfeXUjUfF5wn')
+
+# Get your Data.gov API key at https://api.data.gov/signup/. Save the key in your R environment at the start of your R session using sc_key()
+# use your real key in place of the Xs
+sc_key('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
 # list of the currently available functions
 ls('package:rscorecard')
 ls('package:ipeds')
+
+# To look up information about data elements, use the sc_dict() function.
+sc_dict(filter_vars = TRUE) # List of all variables
+sc_dict("c150_4") # Example
+
 ```
 
 # DATA
@@ -68,11 +66,10 @@ The US Department of Education College Scorecard  contains data on higher educat
 
 For this memo, I used the `rscorecard` and `ipeds`  package in R to perform all analysis.
 
+##Scorecard Institutions
 
-
-## Scorecard HBCUs 
+### HBCUs 
 ```{r, include=F}
-# list of surveys that are available to download
 
 
 HBCUs <- c(
@@ -86,78 +83,64 @@ HBCUs <- c(
   "131520"  # Howard University
 )
 
-# sc_dict(filter_vars = TRUE)--> acts as documentation for rscorecard
-#sc_dict("year")
-
-SC.hbcu <- sc_init() |> 
-      sc_filter(hbcu==1) |> 
-    sc_select(unitid,opeid6, instnm, stabbr,
-    lo_inc_rpy_5yr_rt,
-md_inc_rpy_5yr_rt,
-hi_inc_rpy_5yr_rt,
-
-d150_4,
-d150_l4,
-d150_4_pooled,
-d150_l4_pooled,
-
-pctpell_dcs,
-pell_debt_mdn,
-
-grad_debt_mdn_supp,
-grad_debt_mdn10yr_supp,
-
-md_earn_wne_5yr,
-md_earn_wne_inc1_p6
-  ) |>
-    sc_year("latest") |> 
+                         
+SC.hbcu <- sc_init() |>  
+      sc_filter(hbcu==1) |>   # Filter Scorecard Data for HBCUs
+    sc_select(                # Select Key Variables
+unitid,                 # Unique 6-digit identifier for each institution (Department of Education's National Center for Education Statistics (NCES))
+opeid6,                 # 6-digit OPE ID; used to link to federal aid/NSLDS data
+instnm,                 # Institution name
+stabbr,                 # State postal abbreviation
+lo_inc_rpy_5yr_rt,      # 5-year repayment rate for low-income borrowers (family income <$30,000)
+md_inc_rpy_5yr_rt,      # 5-year repayment rate for middle-income borrowers (family income $30,000–$75,000)
+hi_inc_rpy_5yr_rt,      # 5-year repayment rate for high-income borrowers (family income >$75,000)
+c150_4,                 # Adjusted cohort rate for 150% completion rate at 4-year institutions
+d150_4,                 # Adjusted cohort count (denominator) for 150% completion rate at 4-year institutions
+pctpell_dcs,            # Share of degree/certificate-seeking undergraduates awarded a Pell Grant
+pell_debt_mdn,          # Median cumulative loan debt for Pell Grant recipients at time of leaving institution
+grad_debt_mdn_supp,     # Median cumulative loan debt for completers, suppressed when n<30
+grad_debt_mdn10yr_supp, # Median completer debt expressed as estimated monthly payment under 10-year amortization, suppressed when n<30
+md_earn_wne_5yr,        # Median earnings of graduates working and not enrolled 5 years after completion 
+md_earn_wne_inc1_p6     # Median earnings 6 years after entry for students in the lowest earnings tercile
+) |>
+    sc_year("latest") |> # Set Year
     sc_get()
-SC.hbcu1<- SC.hbcu[which(SC.hbcu$unitid %in%HBCUs),]
-m <- SC.hbcu1[ c("unitid",
-"opeid6",
-"instnm",
-"stabbr",
-"lo_inc_rpy_5yr_rt",
-"md_inc_rpy_5yr_rt",
-"hi_inc_rpy_5yr_rt",
+SC.hbcu1<- SC.hbcu[which(SC.hbcu$unitid %in%HBCUs),] # Filter for Key Variables at selcted HBCUs
+m <- SC.hbcu1[ c(        # Rename HBCU Data set "m"
+vars <- c(               # Restate key variables          
+"unitid",                 # Unique 6-digit identifier for each institution (Department of Education's National Center for Education Statistics (NCES))
+"opeid6",                 # 6-digit OPE ID; used to link to federal aid/NSLDS data
+"instnm",                 # Institution name
+"stabbr",                 # State postal abbreviation
+"lo_inc_rpy_5yr_rt",      # 5-year repayment rate for low-income borrowers (family income <$30,000)
+"md_inc_rpy_5yr_rt",      # 5-year repayment rate for middle-income borrowers (family income $30,000–$75,000)
+"hi_inc_rpy_5yr_rt",      # 5-year repayment rate for high-income borrowers (family income >$75,000)
+"c150_4",                 # Adjusted cohort rate for 150% completion rate at 4-year institutions institutions; from IPEDS Graduation Rates component
+"d150_4",                 # Adjusted cohort count (denominator) for 150% completion rate at 4-year  institutions
+"pctpell_dcs",            # Share of degree/certificate-seeking undergraduates awarded a Pell Grant; 
+"pell_debt_mdn",          # Median cumulative loan debt for Pell Grant recipients at time of leaving institution
+"grad_debt_mdn_supp",     # Median cumulative loan debt for completers, suppressed when n<30
+"grad_debt_mdn10yr_supp", # Median completer debt expressed as estimated monthly payment under 10-year amortization, suppressed when n<30
+"md_earn_wne_5yr",        # Median earnings of graduates working and not enrolled 5 years after completion
+"md_earn_wne_inc1_p6"     # Median earnings 6 years after entry for students in the lowest earnings tercile
+))]
 
-"d150_4",
-"d150_4_pooled",
-
-
-"pctpell_dcs",
-"pell_debt_mdn",
-
-"grad_debt_mdn_supp",
-"grad_debt_mdn10yr_supp",
-
-"md_earn_wne_5yr",
-"md_earn_wne_inc1_p6")]
-names(m) <- c("Unit ID",
-"OPEID","Institution",
-"State",
-
-"Low Family Income Repayment Rate (5yr)",
-"Medium Family Income Repayment Rate (5yr)",
-"High Family Income Repayment Rate (5yr)",
-
-"Completion Count (150%)",
-
-"Completion Count Rolling Average (150%)",
-
-
-"Pell Percentage of DCS",
-"Median Pell Debt",
-
-"Median Debt of Completer",
-"Median Debt of Completer (10yr Monthly Payment)",
-
-"Median Earnings 5 Years After Comlpetion",
-"Median Earnings 5 Years After Completion (Low Income)"
-  
-  
-  
-
+names(m) <- c(   # Renamed key variables     
+"Unit ID",                                         # unitid
+"OPEID",                                           # opeid6
+"Institution",                                     # instnm
+"State",                                           # stabbr
+"Low Family Income Repayment Rate (5yr)",          # lo_inc_rpy_5yr_rt
+"Medium Family Income Repayment Rate (5yr)",       # md_inc_rpy_5yr_rt
+"High Family Income Repayment Rate (5yr)",         # hi_inc_rpy_5yr_rt
+"Completion Rate (150%)",                          # c150_4
+"Completion Count (150%)",                         # d150_4
+"Pell Percentage of DCS",                          # pctpell_dcs
+"Median Pell Debt",                                # pell_debt_mdn
+"Median Debt of Completer",                        # grad_debt_mdn_supp
+"Median Debt of Completer (10yr Monthly Payment)", # grad_debt_mdn10yr_supp
+"Median Earnings 5 Years After Comlpetion",        # md_earn_wne_5yr
+"Median Earnings 6 Years After Entry (Low Income)" # md_earn_wne_inc1_p6
 )
 m
 
@@ -167,14 +150,10 @@ m
 
 
 
-## Scorecard Ivys 
+### Ivys 
 
 
 ```{r, include=F}
-# list of surveys that are available to download
-
-
-
 
 IvyLeague <- c(
   "186131", # Yale University
@@ -188,92 +167,73 @@ IvyLeague <- c(
 )
 
 SC.ivy <- sc_init() |> 
-      sc_filter(region == c(1,2), ccbasic == c(15,16)) |> 
-    sc_select(unitid,opeid6, instnm, stabbr,
-    lo_inc_rpy_5yr_rt,
-md_inc_rpy_5yr_rt,
-hi_inc_rpy_5yr_rt,
-
-d150_4,
-d150_l4,
-d150_4_pooled,
-d150_l4_pooled,
-
-pctpell_dcs,
-pell_debt_mdn,
-
-grad_debt_mdn_supp,
-grad_debt_mdn10yr_supp,
-
-md_earn_wne_5yr,
-md_earn_wne_inc1_p6
+   sc_filter(region == c(1,2), ccbasic == c(15,16)) |> # Filter Scorecard Data for Ivys
+   sc_select(                                          # Select Key Variables
+unitid,                 # Unique 6-digit identifier for each institution (Department of Education's National Center for Education Statistics (NCES))
+opeid6,                 # 6-digit OPE ID; used to link to federal aid/NSLDS data
+instnm,                 # Institution name
+stabbr,                 # State postal abbreviation
+lo_inc_rpy_5yr_rt,      # 5-year repayment rate for low-income borrowers (family income <$30,000)
+md_inc_rpy_5yr_rt,      # 5-year repayment rate for middle-income borrowers (family income $30,000–$75,000)
+hi_inc_rpy_5yr_rt,      # 5-year repayment rate for high-income borrowers (family income >$75,000)
+c150_4,                 # Adjusted cohort rate for 150% completion rate at 4-year institutions
+d150_4,                 # Adjusted cohort count (denominator) for 150% completion rate at 4-year institutions
+pctpell_dcs,            # Share of degree/certificate-seeking undergraduates awarded a Pell Grant
+pell_debt_mdn,          # Median cumulative loan debt for Pell Grant recipients at time of leaving institution
+grad_debt_mdn_supp,     # Median cumulative loan debt for completers, suppressed when n<30
+grad_debt_mdn10yr_supp, # Median completer debt expressed as estimated monthly payment under 10-year amortization, suppressed when n<30
+md_earn_wne_5yr,        # Median earnings of graduates working and not enrolled 5 years after completion 
+md_earn_wne_inc1_p6     # Median earnings 6 years after entry for students in the lowest earnings tercile
   ) |>
-    sc_year("latest") |> 
+    sc_year("latest") |> # Set Year
     sc_get()
-SC.ivy1<- SC.ivy[which(SC.ivy$unitid %in%IvyLeague),]
-n <- SC.ivy1[ c("unitid",
-"opeid6",
-"instnm",
-"stabbr",
-"lo_inc_rpy_5yr_rt",
-"md_inc_rpy_5yr_rt",
-"hi_inc_rpy_5yr_rt",
+SC.ivy1<- SC.ivy[which(SC.ivy$unitid %in%IvyLeague),] # Filter for Key Variables at selcted HBCUs
+n <- SC.ivy1[ c(        # Rename HBCU Data set "m"
+vars <- c(               # Restate key variables          
+"unitid",                 # Unique 6-digit identifier for each institution (Department of Education's National Center for Education Statistics (NCES))
+"opeid6",                 # 6-digit OPE ID; used to link to federal aid/NSLDS data
+"instnm",                 # Institution name
+"stabbr",                 # State postal abbreviation
+"lo_inc_rpy_5yr_rt",      # 5-year repayment rate for low-income borrowers (family income <$30,000)
+"md_inc_rpy_5yr_rt",      # 5-year repayment rate for middle-income borrowers (family income $30,000–$75,000)
+"hi_inc_rpy_5yr_rt",      # 5-year repayment rate for high-income borrowers (family income >$75,000)
+"c150_4",                 # Adjusted cohort rate for 150% completion rate at 4-year institutions institutions; from IPEDS Graduation Rates component
+"d150_4",                 # Adjusted cohort count (denominator) for 150% completion rate at 4-year  institutions
+"pctpell_dcs",            # Share of degree/certificate-seeking undergraduates awarded a Pell Grant; 
+"pell_debt_mdn",          # Median cumulative loan debt for Pell Grant recipients at time of leaving institution
+"grad_debt_mdn_supp",     # Median cumulative loan debt for completers, suppressed when n<30
+"grad_debt_mdn10yr_supp", # Median completer debt expressed as estimated monthly payment under 10-year amortization, suppressed when n<30
+"md_earn_wne_5yr",        # Median earnings of graduates working and not enrolled 5 years after completion
+"md_earn_wne_inc1_p6"     # Median earnings 6 years after entry for students in the lowest earnings tercile
+))]
 
-"d150_4",
-"d150_4_pooled",
-
-
-"pctpell_dcs",
-"pell_debt_mdn",
-
-"grad_debt_mdn_supp",
-"grad_debt_mdn10yr_supp",
-
-"md_earn_wne_5yr",
-"md_earn_wne_inc1_p6")]
-names(n) <- c("Unit ID",
-"OPEID","Institution",
-"State",
-
-"Low Family Income Repayment Rate (5yr)",
-"Medium Family Income Repayment Rate (5yr)",
-"High Family Income Repayment Rate (5yr)",
-
-"Completion Count (150%)",
-
-"Completion Count Rolling Average (150%)",
-
-
-"Pell Percentage of DCS",
-"Median Pell Debt",
-
-"Median Debt of Completer",
-"Median Debt of Completer (10yr Monthly Payment)",
-
-"Median Earnings 5 Years After Comlpetion",
-"Median Earnings 5 Years After Completion (Low Income)"
-  
-  
-  
-
+names(n) <- c(   # Renamed key variables     
+"Unit ID",                                         # unitid
+"OPEID",                                           # opeid6
+"Institution",                                     # instnm
+"State",                                           # stabbr
+"Low Family Income Repayment Rate (5yr)",          # lo_inc_rpy_5yr_rt
+"Medium Family Income Repayment Rate (5yr)",       # md_inc_rpy_5yr_rt
+"High Family Income Repayment Rate (5yr)",         # hi_inc_rpy_5yr_rt
+"Completion Rate (150%)",                          # c150_4
+"Completion Count (150%)",                         # d150_4
+"Pell Percentage of DCS",                          # pctpell_dcs
+"Median Pell Debt",                                # pell_debt_mdn
+"Median Debt of Completer",                        # grad_debt_mdn_supp
+"Median Debt of Completer (10yr Monthly Payment)", # grad_debt_mdn10yr_supp
+"Median Earnings 5 Years After Comlpetion",        # md_earn_wne_5yr
+"Median Earnings 6 Years After Entry (Low Income)" # md_earn_wne_inc1_p6
 )
 n
-
 
 
 ```
 
 
 
-## Scorecard Community Colleges
+### Community Colleges
 
 ```{r, include=F}
-# list of surveys that are available to download
-
-
-
-
-
 
 Community <- c(
 "197966", # Beaufort County Community College 
@@ -286,86 +246,71 @@ Community <- c(
 )
 
 SC.comm <- sc_init() |> 
-      sc_filter(region == c(2,4,5,8)) |> 
-    sc_select(unitid,opeid6, instnm, stabbr,
-    lo_inc_rpy_5yr_rt,
-md_inc_rpy_5yr_rt,
-hi_inc_rpy_5yr_rt,
-
-d150_4,
-d150_l4,
-d150_4_pooled,
-d150_l4_pooled,
-
-pctpell_dcs,
-pell_debt_mdn,
-
-grad_debt_mdn_supp,
-grad_debt_mdn10yr_supp,
-
-md_earn_wne_5yr,
-md_earn_wne_inc1_p6
+      sc_filter(region == c(2,4,5,8)) |> # Filter Data for Community Colleges
+    sc_select(                                          # Select Key Variables
+unitid,                 # Unique 6-digit identifier for each institution (Department of Education's National Center for Education Statistics (NCES))
+opeid6,                 # 6-digit OPE ID; used to link to federal aid/NSLDS data
+instnm,                 # Institution name
+stabbr,                 # State postal abbreviation
+lo_inc_rpy_5yr_rt,      # 5-year repayment rate for low-income borrowers (family income <$30,000)
+md_inc_rpy_5yr_rt,      # 5-year repayment rate for middle-income borrowers (family income $30,000–$75,000)
+hi_inc_rpy_5yr_rt,      # 5-year repayment rate for high-income borrowers (family income >$75,000)
+c150_4,                 # Adjusted cohort rate for 150% completion rate at 4-year institutions
+d150_4,                 # Adjusted cohort count (denominator) for 150% completion rate at 4-year institutions
+pctpell_dcs,            # Share of degree/certificate-seeking undergraduates awarded a Pell Grant
+pell_debt_mdn,          # Median cumulative loan debt for Pell Grant recipients at time of leaving institution
+grad_debt_mdn_supp,     # Median cumulative loan debt for completers, suppressed when n<30
+grad_debt_mdn10yr_supp, # Median completer debt expressed as estimated monthly payment under 10-year amortization, suppressed when n<30
+md_earn_wne_5yr,        # Median earnings of graduates working and not enrolled 5 years after completion 
+md_earn_wne_inc1_p6     # Median earnings 6 years after entry for students in the lowest earnings tercile 
   ) |>
-    sc_year("latest") |> 
+    sc_year("latest") |> # Set Year
     sc_get()
+SC.comm1<- SC.comm[which(SC.comm$unitid %in%Community),] # Filter for Key Variables at selcted HBCUs
+o <- SC.comm1[ c(        # Rename HBCU Data set "m"
+vars <- c(               # Restate key variables          
+"unitid",                 # Unique 6-digit identifier for each institution (Department of Education's National Center for Education Statistics (NCES))
+"opeid6",                 # 6-digit OPE ID; used to link to federal aid/NSLDS data
+"instnm",                 # Institution name
+"stabbr",                 # State postal abbreviation
+"lo_inc_rpy_5yr_rt",      # 5-year repayment rate for low-income borrowers (family income <$30,000)
+"md_inc_rpy_5yr_rt",      # 5-year repayment rate for middle-income borrowers (family income $30,000–$75,000)
+"hi_inc_rpy_5yr_rt",      # 5-year repayment rate for high-income borrowers (family income >$75,000)
+"c150_4",                 # Adjusted cohort rate for 150% completion rate at 4-year institutions institutions; from IPEDS Graduation Rates component
+"d150_4",                 # Adjusted cohort count (denominator) for 150% completion rate at 4-year  institutions
+"pctpell_dcs",            # Share of degree/certificate-seeking undergraduates awarded a Pell Grant; 
+"pell_debt_mdn",          # Median cumulative loan debt for Pell Grant recipients at time of leaving institution
+"grad_debt_mdn_supp",     # Median cumulative loan debt for completers, suppressed when n<30
+"grad_debt_mdn10yr_supp", # Median completer debt expressed as estimated monthly payment under 10-year amortization, suppressed when n<30
+"md_earn_wne_5yr",        # Median earnings of graduates working and not enrolled 5 years after completion
+"md_earn_wne_inc1_p6"     # Median earnings 6 years after entry for students in the lowest earnings tercile
+))]
 
-
-
-SC.comm1<- SC.comm[which(SC.comm$unitid %in%Community),]
-o <- SC.comm1[ c("unitid",
-"opeid6",
-"instnm",
-"stabbr",
-"lo_inc_rpy_5yr_rt",
-"md_inc_rpy_5yr_rt",
-"hi_inc_rpy_5yr_rt",
-
-"d150_4",
-"d150_4_pooled",
-
-
-"pctpell_dcs",
-"pell_debt_mdn",
-
-"grad_debt_mdn_supp",
-"grad_debt_mdn10yr_supp",
-
-"md_earn_wne_5yr",
-"md_earn_wne_inc1_p6")]
-
-
-names(o) <- c("Unit ID",
-"OPEID","Institution",
-"State",
-
-"Low Family Income Repayment Rate (5yr)",
-"Medium Family Income Repayment Rate (5yr)",
-"High Family Income Repayment Rate (5yr)",
-
-"Completion Count (150%)",
-
-"Completion Count Rolling Average (150%)",
-
-
-"Pell Percentage of DCS",
-"Median Pell Debt",
-
-"Median Debt of Completer",
-"Median Debt of Completer (10yr Monthly Payment)",
-
-"Median Earnings 5 Years After Comlpetion",
-"Median Earnings 5 Years After Completion (Low Income)"
-  
-  
-  
-
+names(o) <- c(   # Renamed key variables     
+"Unit ID",                                         # unitid
+"OPEID",                                           # opeid6
+"Institution",                                     # instnm
+"State",                                           # stabbr
+"Low Family Income Repayment Rate (5yr)",          # lo_inc_rpy_5yr_rt
+"Medium Family Income Repayment Rate (5yr)",       # md_inc_rpy_5yr_rt
+"High Family Income Repayment Rate (5yr)",         # hi_inc_rpy_5yr_rt
+"Completion Rate (150%)",                          # c150_4
+"Completion Count (150%)",                         # d150_4
+"Pell Percentage of DCS",                          # pctpell_dcs
+"Median Pell Debt",                                # pell_debt_mdn
+"Median Debt of Completer",                        # grad_debt_mdn_supp
+"Median Debt of Completer (10yr Monthly Payment)", # grad_debt_mdn10yr_supp
+"Median Earnings 5 Years After Comlpetion",        # md_earn_wne_5yr
+"Median Earnings 6 Years After Entry (Low Income)" # md_earn_wne_inc1_p6
 )
 o
 
 
-
 ```
 
+
+
+## IPEDS Institutions 
 
 
 ```{r, include=F}
@@ -383,28 +328,17 @@ ipeds::available_ipeds()
 
 
 
-## IPEDS Institutions 
 
 ```{r, eval=F}
+# sets machine timeout time 
 options(timeout = 600)
-#("ipeds.download.dir" = "/Users/Ari/Desktop/Quant Shop/College Default Rate/ipeds/data/downloaded/")
 
 
-#ipeds::download_ipeds(
-  #year = 2018, 
-  #dir = "~/Desktop/Quant Shop/College Default Rate/ipeds/code/data/downloaded",
-  #force=T) 
-
-#ipeds::download_ipeds(
-  #year = 2021, 
- # dir = "~/Desktop/Quant Shop/College Default Rate/ipeds/data/downloaded",
- # force=T) 
-
-# download data
-#ipeds2018 <- ipeds::load_ipeds(2018) # load data
-#names(ipeds2018)
-
-
+# Download the IPEDS data
+ ipeds::download_ipeds(
+ year = 2021,             # Set Year
+ dir = "data/downloaded", # using the here::i_am function modifies machine specific working directory pathways into project specific pathways improving reproducibility
+ force=TRUE)              
 
 ipeds2021 <- ipeds::load_ipeds(2021) # load data
 names(ipeds2021)
@@ -428,9 +362,15 @@ HBCUs <- c(
 )
 
 hd2021.hbcu <- hd2021[which(hd2021$unitid %in%HBCUs),]
-p <- hd2021.hbcu[, c("instnm", "webaddr", "stabbr", "control","unitid")]
+p <- hd2021.hbcu[, c( # Key Variable Selection
+"instnm",  # Institution
+"webaddr", # Web address of the School
+"stabbr",  # State 2 letter Abbreviation 
+"control", # Institution Sector
+"unitid"   # 6-digit identification number (NCES)
+)]
 names(p) <- c("Institution", "Web Address", "State", "Sector","Unit ID")
-p
+
 
 IvyLeague <- c(
   "186131", # Yale University
@@ -444,7 +384,13 @@ IvyLeague <- c(
 )
 
 hd2021.ivy <- hd2021[which(hd2021$unitid %in%IvyLeague),]
-q <- hd2021.ivy[, c("instnm", "webaddr", "stabbr", "control","unitid")]
+q <- hd2021.ivy[, c(
+"instnm",  # Institution
+"webaddr", # Web address of the School
+"stabbr",  # State 2 letter Abbreviation 
+"control", # Institution Sector
+"unitid"   # 6-digit identification number (NCES)
+)]
 names(q) <- c("Institution", "Web Address", "State", "Sector","Unit ID" )
 q
 
@@ -459,7 +405,14 @@ Community <- c(
 )
 
 hd2021.comm <- hd2021[which(hd2021$unitid %in%Community),]
-r <- hd2021.comm[, c("instnm", "webaddr", "stabbr", "control","unitid")]
+r <- hd2021.comm[, c(
+"instnm",  # Institution
+"webaddr", # Web address of the School
+"stabbr",  # State 2 letter Abbreviation 
+"control", # Institution Sector
+"unitid"   # 6-digit identification number (NCES)
+)]
+
 names(r) <- c("Institution", "Web Address", "State", "Sector","Unit ID")
 r
 
@@ -467,17 +420,25 @@ r
 
 
 
+# Merge Scorecard and IPEDS Data
+ 
+Note: For future reference, we may only use `Unit ID` ( 6 digit OPE ID ) for merging as it is the most compact and translatable variable across data sets. `Institution` and `State` are included to remove repeated columns. 
+
+
 ```{r, include=F}
 
-
-MP.HBCU<- merge(m, p, by = c("Unit ID","Institution","State"), all = TRUE)
+# Merge each Institutions Data using Unit ID as Key Variable
+MP.HBCU<- merge(m, p, by = c("Unit ID","Institution","State"), all = TRUE) 
 NQ.IVY<- merge(n, q, by = c("Unit ID","Institution","State"), all = TRUE)
 OR.COMM<- merge(o, r, by = c("Unit ID","Institution","State"), all = TRUE)
 
 
 # Combine into a named list
-Inital_Default_List  <- list("Initial HBCU Default Data" = MP.HBCU, "Initial Ivy Default Data" = NQ.IVY,
-"Initial Community Default Data" = OR.COMM)
+Inital_Default_List  <- list(
+"Initial HBCU Default Data" = MP.HBCU, 
+"Initial Ivy Default Data" = NQ.IVY,
+"Initial Community Default Data" = OR.COMM
+)
 # Export to one file with multiple sheets
 write_xlsx(Inital_Default_List, "Inital_Default.xlsx")
 ```
